@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>jsDownloader</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+  <script>
+      function go() {
+          let url=Number(document.querySelector("#url").value);
+          let cnt=Number(document.querySelector("#cnt").value);
+          console.info(url,cnt);
+          for(let i=1;i<=cnt;i++){
+              func(i);
+              console.info(i);
+          }
+          if(cnt>0){loader(1);}
+      }
+
+      function func(number) {
+          let bar=document.createElement("div");
+          bar.setAttribute("class", "progress-bar progress-bar-striped active");
+          bar.setAttribute("role",  "progressbar");
+          bar.setAttribute("aria-valuenow", "0");
+          bar.setAttribute("aria-valuemin", "0");
+          bar.setAttribute("aria-valuemax", "100");
+          bar.setAttribute("style", "width:0%");
+          bar.appendChild(document.createTextNode('0%'));
+          bar.setAttribute("id", "bar"+String(number));
+          let area=document.querySelector("#loadArea");
+          area.appendChild(bar);
+      }
+
+      function loader(number)
+      {
+          //https://stackoverflow.com/questions/22724070/prompt-file-download-with-xmlhttprequest
+          //https://stackoverflow.com/a/23054920/
+          //https://stackoverflow.com/questions/46801781/how-to-get-headers-from-xhr
+          let cnt=Number(document.querySelector("#cnt").value);
+          if (number>cnt){return false;}
+          //let that=this;
+          let url=document.querySelector("#url").value;
+          let elem = document.getElementById(`bar${number}`);
+          let page_url = url.replace(/{{I}}/ig, number);
+          console.log(page_url);
+          let req = new XMLHttpRequest();
+          req.open("POST", page_url, true);
+          req.addEventListener("progress", function (evt) {
+              if(evt.lengthComputable) {
+                  let percentComplete = Math.round((evt.loaded / evt.total)*100);
+                  //console.log(percentComplete);
+                  elem.style.width = percentComplete + '%';
+                  elem.innerHTML = percentComplete + '%';
+              }
+          }, false);
+          req.responseType = "blob";
+          req.onreadystatechange = function () {
+              if (req.readyState === 4 && req.status === 200) {
+                  let contentDispo = this.getResponseHeader('Content-Disposition');
+                  let filename = contentDispo.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)[1];
+                  console.log(filename);
+                  if (typeof window.chrome !== 'undefined') {
+                      // Chrome version
+                      let link = document.createElement('a');
+                      link.href = window.URL.createObjectURL(req.response);
+                      link.download = filename;
+                      link.click();
+                  } else if (typeof window.navigator.msSaveBlob !== 'undefined') {
+                      // IE version
+                      let blob = new Blob([req.response], { type: 'application/force-download' });
+                      window.navigator.msSaveBlob(blob, filename);
+                  } else {
+                      // Firefox version
+                      let file = new File([req.response], filename, { type: 'application/force-download' });
+                      window.open(URL.createObjectURL(file));
+                  }
+                  setTimeout(()=>loader(++number),5e3);
+              }
+          };
+          req.send();
+      }
+  </script>
+</head>
+<body>
+<br />
+<div class="row align-items-center">
+  <div class="col-md-3"></div>
+  <div class="col-md-3"><input type="text" class="form-control" id="url" placeholder="httpa://example.com/{{I}}"/></div>
+  <div class="col-md-3"><input type="number" class="form-control" step="1" id="cnt" /></div>
+  <div class="col-md-3"><button class="btn btn-primary" id="a1" onclick="go()">Download</button></div>
+</div>
+<hr />
+<div class="container">
+  <div class="progress" id="loadArea">
+  </div>
+</div>
+</body>
+</html>
